@@ -8,9 +8,8 @@
 #include <map>
 #include <vector>
 
-#define SINGLE_TEST
 //#define PUFF_THREE
-#define PUFF_FOUR
+//#define PUFF_FOUR
 //#define PUFF_FIVE
 //#define DIVER_TOP
 //#define DIVER_MID
@@ -47,8 +46,8 @@ void PrintWinValueConversion()
 {
 	int index = 0;
 	int win = 0;
-	for (int i = 0; i < 5; i++) {
-		for (int j = 0; j < 3; j++) {
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 5; j++) {
 			index = GetFeatureWinIndex(i, j);
 			win = GetWinFrom1DIndex(index);
 			std::cout << "index : " << index << " : win " << win << std::endl;
@@ -130,15 +129,19 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (feature && !winValue) {
-			//int cs = feature >> 4; // current symbol being used 
-			//int count = feature & cs | 1; // the amount of them in the winline.
+			writtenFiles++;
+			int cs = feature >> 4; // current symbol being used 
+			int count = feature & cs;// | 1; // the amount of them in the winline.
 			//int symbol = cs; 
-			//FoundFeature(symbol);
+			if (count == 4)
+				FoundFeature(cs);
+			
 			feature = 0;
 		}
-//#if defined (PUFF_THREE) || defined (PUFF_FOUR) || defined (PUFF_FIVE)
+
+#if defined (PUFF_THREE) || defined (PUFF_FOUR) || defined (PUFF_FIVE)
 		else if (!feature && !winValue && writtenFiles < 250) {
-			if (CountPuffs() == 3 /*&& CountPuffs() <= 5*/) {
+			if (CountPuffs() == 5 /*&& CountPuffs() <= 5*/) {
 				TestSymbol top(ReelScreen[0][0], ReelScreen[0][1], ReelScreen[0][2], 
 					ReelScreen[0][3], ReelScreen[0][4]);
 				TestSymbol mid(ReelScreen[1][0], ReelScreen[1][1], ReelScreen[1][2],
@@ -148,11 +151,23 @@ int main(int argc, char *argv[]) {
 
 				char *filename;
 #ifdef PUFF_THREE
+#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff3ok.txt";
+#else
+				filename = "outcomes\\features\\puff\\puff3ok.txt";
+#endif
 #elif defined PUFF_FOUR
+#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff4ok.txt";
 #else
+				filename = "outcomes\\features\\puff\\puff4ok.txt";
+#endif
+#else
+#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff5ok.txt";
+#else
+				filename = "outcomes\\features\\puff\\puff5k.txt";
+#endif
 #endif
 				WriteFeature(filename, &top, &mid, &bottom);
 				writtenFiles++;
@@ -162,7 +177,7 @@ int main(int argc, char *argv[]) {
 					screens.erase(it);
 			}
 		}
-//#endif
+#endif
 #if defined(DIVER_TOP) || defined (DIVER_MID) || defined (DIVER_BOTTOM)
 		else if (!winValue && !feature && writtenFiles < 250) {
 			CheckDiver();
@@ -173,7 +188,7 @@ int main(int argc, char *argv[]) {
 		//	lossCount++;
 		//}
 
-	} while (/*cycle ||*/ writtenFiles < 250);
+	} while (/*cycle ||*/ writtenFiles < 1000);
 
 	cycle = 0;
 	
@@ -344,7 +359,8 @@ int CheckForFeature()
 		if (IsFiveOfAKind(&symbol)) {
 			currentWinCount = 5;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			//if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
 				++numOfFeatures;
@@ -356,7 +372,8 @@ int CheckForFeature()
 		else if (IsFourOfAKind(0, &symbol)) {
 			currentWinCount = 4;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE&& CurrentEligibleSymbol!=SHARK) {
+			//if(CurrentEligibleSymbol>ACE&& CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;			
 				++numOfFeatures;
@@ -368,7 +385,8 @@ int CheckForFeature()
 		else if (IsFourOfAKind(1, &symbol)) {
 			currentWinCount = 4;
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if(CurrentEligibleSymbol>ACE) {
+			//if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
 				++numOfFeatures;
@@ -380,7 +398,8 @@ int CheckForFeature()
 		else if (IsThreeOfAKind(0, &symbol)) {
 			currentWinCount = 3;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			//if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
 				++numOfFeatures;
@@ -392,7 +411,8 @@ int CheckForFeature()
 		else if (IsThreeOfAKind(1, &symbol)) {
 			currentWinCount = 3;
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			//if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol<<4);
 				featureData |= currentWinCount;
 				++numOfFeatures;
@@ -404,7 +424,8 @@ int CheckForFeature()
 		else if (IsThreeOfAKind(2, &symbol)) {
 			currentWinCount = 3;
 			CurrentEligibleSymbol = ReelScreen[2][pos3];
-			if(CurrentEligibleSymbol>ACE) {
+			//if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
+			if (CurrentEligibleSymbol == LOBSTER) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
 				++numOfFeatures;
@@ -492,9 +513,9 @@ void GetThreesWin(int sym)
 	using namespace statics;
 	switch (sym) {
 	case TEN: // Ten
-		accumulatedTotal += WinValueTable[0][0]; break;
-	case JACK: // Jack
 		accumulatedTotal += WinValueTable[1][0]; break;
+	case JACK: // Jack
+		accumulatedTotal += WinValueTable[2][0]; break;
 	case QUEEN: // Queen
 		accumulatedTotal += WinValueTable[2][0]; break;
 	case KING: // King
@@ -526,8 +547,6 @@ void FoundFeature(int sym)
 		strcat(filename, "QUEEN_OUTCOMES.txt"); break;
 	case KING:
 		strcat(filename, "KING_OUTCOMES.txt"); break;
-	//case SHARK:
-	//	strcat(filename, "SHARK_OUTCOMES.txt"); break;
 	case CRAB:
 		strcat(filename, "CRAB_OUTCOMES.txt"); break;
 	case SHELL:
@@ -677,8 +696,6 @@ int GetWinFrom1DIndex( int i )
 	return WinValueTable[indexR][indexC];
 }
 
-//void WriteWin(const char* winValue, const TestSymbol* top, const TestSymbol* mid,
-//			  const TestSymbol* bot)
 void WriteWin(const char* winValue, TestSymbol* top, TestSymbol* mid, TestSymbol* bot)
 {
 	ofstream file;
@@ -773,7 +790,7 @@ int CountPuffs() {
 		}
 	}
 	
-	if (counter == 3) return counter;
+	if (counter == 5) return counter;
 	else return 0;
 }
 
