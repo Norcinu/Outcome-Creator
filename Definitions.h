@@ -61,7 +61,7 @@ int Symbols[MAX_REEL_LENGTH] =
 	LOBSTER,
 	STARFISH,
 	JACK,
-	DIVER,
+	ACE,
 	TEN, 
 	PUFF,
 	JACK,
@@ -94,7 +94,7 @@ int CentreSymbols[MAX_REEL_LENGTH] = {
 	JACK,
 	STARFISH,
 	TEN,
-	DIVER,
+	ACE,
 	JACK,
 	SHARK,
 	TEN,
@@ -109,22 +109,24 @@ int CentreSymbols[MAX_REEL_LENGTH] = {
 
 #if defined ONE_POUND_GAME
 
-int WinValueTable[5][3] = {
-	50, 200, 1000,	 // 10
-	100, 300, 1500,	 // Jack
-	150, 500, 2000,  // Queen
-	200, 1000, 2500, // King
-	300, 1500, 5000  // Ace
+int WinValueTable[6][4] = {
+	0, 50, 200, 1000,	 // 10
+	0, 100, 300, 1500,	 // Jack
+	0, 150, 500, 2000,   // Queen
+	0, 200, 1000, 2500,  // King
+	0, 300, 1500, 5000,  // Ace
+	100, 500, 2000, 5000 // Shark
 };
 
 #elif defined TWO_POUND_GAME
 
-int WinValueTable[5][3] = {
-	100, 400, 2000,	 // 10
-	100, 600, 3000,	 // Jack
-	300, 1000, 4000, // Queen
-	400, 2000, 5000, // King
-	600, 3000, 5000  // Ace
+int WinValueTable[6][4] = {
+	0, 100, 400, 2000,	 // 10
+	0, 100, 600, 3000,	 // Jack
+	0, 300, 1000, 4000,  // Queen
+	0, 400, 2000, 5000,  // King
+	0, 600, 3000, 5000,  // Ace
+	0, 400, 1000, 5000	 // Shark
 };
 
 #endif
@@ -150,6 +152,8 @@ struct TestSymbol
 	TestSymbol() {}
 	TestSymbol(unsigned char r1, unsigned char r2, unsigned char r3, unsigned char r4, unsigned char r5) :
 	_r1(r1), _r2(r2), _r3(r3), _r4(r4), _r5(r5) {}
+
+	~TestSymbol() {}
 };
 
 struct OutputFormat
@@ -193,5 +197,7 @@ void WriteToFile( std::ofstream& file, const TestSymbol* t1, const TestSymbol* t
 				 const TestSymbol* t3 );
 int GetWinFrom1DIndex( int i );
 void CleanUp();
+int CountPuffs();
+void CheckDiver();
 
 #endif

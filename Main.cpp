@@ -8,6 +8,14 @@
 #include <map>
 #include <vector>
 
+#define SINGLE_TEST
+//#define PUFF_THREE
+#define PUFF_FOUR
+//#define PUFF_FIVE
+//#define DIVER_TOP
+//#define DIVER_MID
+//#define DIVER_BOTTOM
+
 using namespace std;
 
 std::multimap<int, std::vector<TestSymbol*> > screens;
@@ -65,6 +73,7 @@ int main(int argc, char *argv[]) {
 	//srand(time(NULL));
 	using namespace statics;
 	accumulatedTotal = 0;
+	int writtenFiles = 0;
 
 #ifdef _DEBUG
 	FEATURE_WRITES = 0;
@@ -72,8 +81,8 @@ int main(int argc, char *argv[]) {
 #endif
 
 	CurrentSymbol::CurrentEligibleSymbol = 0;
-
-	int cycle = 20000000;
+	//int cycle = 200000000;
+	int cycle = 50000000;
 	//int cycle = 100000;
 	//int cycle = 10000;
 
@@ -121,18 +130,50 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (feature && !winValue) {
-			int cs = feature >> 4; // current symbol being used 
-			int count = feature & cs | 1; // the amount of them in the winline.
-			int symbol = cs; 
-			FoundFeature(symbol);
+			//int cs = feature >> 4; // current symbol being used 
+			//int count = feature & cs | 1; // the amount of them in the winline.
+			//int symbol = cs; 
+			//FoundFeature(symbol);
 			feature = 0;
 		}
-		else if (lossCount < 100000) {
-			WriteLoses();
-			lossCount++;
-		}
+//#if defined (PUFF_THREE) || defined (PUFF_FOUR) || defined (PUFF_FIVE)
+		else if (!feature && !winValue && writtenFiles < 250) {
+			if (CountPuffs() == 3 /*&& CountPuffs() <= 5*/) {
+				TestSymbol top(ReelScreen[0][0], ReelScreen[0][1], ReelScreen[0][2], 
+					ReelScreen[0][3], ReelScreen[0][4]);
+				TestSymbol mid(ReelScreen[1][0], ReelScreen[1][1], ReelScreen[1][2],
+					ReelScreen[1][3], ReelScreen[1][4]);
+				TestSymbol bottom(ReelScreen[2][0], ReelScreen[2][1], ReelScreen[2][2],
+					ReelScreen[2][3], ReelScreen[2][4]);
 
-	} while (cycle);
+				char *filename;
+#ifdef PUFF_THREE
+				filename = "outcomes\\features\\puff\\debug\\puff3ok.txt";
+#elif defined PUFF_FOUR
+				filename = "outcomes\\features\\puff\\debug\\puff4ok.txt";
+#else
+				filename = "outcomes\\features\\puff\\debug\\puff5ok.txt";
+#endif
+				WriteFeature(filename, &top, &mid, &bottom);
+				writtenFiles++;
+				
+				multimap<int, vector<TestSymbol*> >::iterator it = screens.find(winValue);
+				if (it != screens.end())
+					screens.erase(it);
+			}
+		}
+//#endif
+#if defined(DIVER_TOP) || defined (DIVER_MID) || defined (DIVER_BOTTOM)
+		else if (!winValue && !feature && writtenFiles < 250) {
+			CheckDiver();
+		}
+#endif
+		//else if (lossCount < 100000) {
+			//WriteLoses();
+		//	lossCount++;
+		//}
+
+	} while (/*cycle ||*/ writtenFiles < 250);
 
 	cycle = 0;
 	
@@ -208,27 +249,27 @@ int CheckForWin()
 
 		if (IsFiveOfAKind(&symbols)) {
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
 				GetFivesWin(CurrentEligibleSymbol);
 		} // 4 from the left.
 		else if (IsFourOfAKind(0, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol < ACE|| CurrentEligibleSymbol == SHARK)
 				GetFoursWin(CurrentEligibleSymbol);
 		} // 4 from the right.
 		else if (IsFourOfAKind(1, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
 				GetFoursWin(CurrentEligibleSymbol);
 		} // 3 from the left.
 		else if (IsThreeOfAKind(0, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
 				GetThreesWin(CurrentEligibleSymbol);
 		} // three from centre.
 		else if (IsThreeOfAKind(1, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
 				GetThreesWin(CurrentEligibleSymbol);
 		} // three from the right
 		else if (IsThreeOfAKind(2, &symbols)) {
@@ -236,6 +277,15 @@ int CheckForWin()
 			if (CurrentEligibleSymbol < ACE)
 				GetThreesWin(CurrentEligibleSymbol);
 		}
+		// two of a kind
+		//if (CurrentEligibleSymbol == SHARK) {
+		if (ReelScreen[0][pos1] == SHARK) {
+			CurrentEligibleSymbol = SHARK;
+			if (ReelScreen[0][pos1] == SHARK && ReelScreen[0][pos2] == SHARK)
+				accumulatedTotal += 1000;
+		}
+
+		//else if (IsTwoOfAKind(0, &symbols))
 	}
 	
 	//FoundFeature(symbolValue);
@@ -290,23 +340,15 @@ int CheckForFeature()
 		int pos5 = WinLines[i][4];
 		
 		TestSymbol symbol(pos1, pos2, pos3, pos4, pos5);
-
-		//if (numOfFeatures > 0) break;
 		
 		if (IsFiveOfAKind(&symbol)) {
 			currentWinCount = 5;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE) {
+			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 5);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				FEATURE_COUNT++;
-				
-#endif 
 			}
 		}
 		
@@ -314,16 +356,11 @@ int CheckForFeature()
 		else if (IsFourOfAKind(0, &symbol)) {
 			currentWinCount = 4;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE) {
+			if(CurrentEligibleSymbol>ACE&& CurrentEligibleSymbol!=SHARK) {
 				featureData = (CurrentEligibleSymbol << 4);
-				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 4);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);			
+				featureData |= currentWinCount;			
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				FEATURE_COUNT++;
-#endif 
 			}
 		}
 		
@@ -334,13 +371,8 @@ int CheckForFeature()
 			if(CurrentEligibleSymbol>ACE) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 4);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				FEATURE_COUNT++;
-#endif 
 			}
 		}
 		
@@ -348,16 +380,11 @@ int CheckForFeature()
 		else if (IsThreeOfAKind(0, &symbol)) {
 			currentWinCount = 3;
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if(CurrentEligibleSymbol>ACE) {
+			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 3);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				FEATURE_COUNT++;
-#endif 
 			}
 		}
 		
@@ -365,16 +392,11 @@ int CheckForFeature()
 		else if (IsThreeOfAKind(1, &symbol)) {
 			currentWinCount = 3;
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if(CurrentEligibleSymbol>ACE) {
+			if(CurrentEligibleSymbol>ACE && CurrentEligibleSymbol!=SHARK) {
 				featureData = (CurrentEligibleSymbol<<4);
 				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 3);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				FEATURE_COUNT++;
-#endif
 			}
 		}
 		
@@ -385,13 +407,8 @@ int CheckForFeature()
 			if(CurrentEligibleSymbol>ACE) {
 				featureData = (CurrentEligibleSymbol << 4);
 				featureData |= currentWinCount;
-				//featureWinIndex = GetFeatureWinIndex(CurrentEligibleSymbol, 3);
-				//featureInfo = PackFeature(isFeature, featureWinIndex);
 				++numOfFeatures;
 				currentWinline = i;
-#ifdef _DEBUG
-				++FEATURE_COUNT;
-#endif
 			}
 		}
 	}
@@ -440,6 +457,8 @@ void GetFivesWin( int sym )
 		accumulatedTotal += WinValueTable[3][2]; break; // £25 
 	case ACE: // Ace
 		accumulatedTotal += WinValueTable[4][2]; break;	
+	case SHARK:
+		accumulatedTotal += 10000; break;
 	default:
 		//	featureFound = true;
 		accumulatedTotal += 0; break;
@@ -460,6 +479,8 @@ void GetFoursWin(int sym)
 		accumulatedTotal += WinValueTable[3][1]; break; // £10
 	case ACE: // Ace 4
 		accumulatedTotal += WinValueTable[4][1]; break;
+	case SHARK:
+		accumulatedTotal += 2000; break;
 	default:
 		//	featureFound = true;
 		accumulatedTotal += 0; break;
@@ -480,6 +501,8 @@ void GetThreesWin(int sym)
 		accumulatedTotal += WinValueTable[3][0]; break; // £25	
 	case ACE: // Ace
 		accumulatedTotal += WinValueTable[4][0]; break;
+	case SHARK:
+		accumulatedTotal += 100; break;
 	default:
 		//	featureFound = true;
 		accumulatedTotal += 0; break;				
@@ -503,8 +526,8 @@ void FoundFeature(int sym)
 		strcat(filename, "QUEEN_OUTCOMES.txt"); break;
 	case KING:
 		strcat(filename, "KING_OUTCOMES.txt"); break;
-	case SHARK:
-		strcat(filename, "SHARK_OUTCOMES.txt"); break;
+	//case SHARK:
+	//	strcat(filename, "SHARK_OUTCOMES.txt"); break;
 	case CRAB:
 		strcat(filename, "CRAB_OUTCOMES.txt"); break;
 	case SHELL:
@@ -578,7 +601,7 @@ void WriteToFile( ofstream& file, const TestSymbol* t1,
 	
 	file << SelectSymbolForWrite(t2->_r1) << ", " << SelectSymbolForWrite(t2->_r2) << ", "
 		<< SelectSymbolForWrite(t2->_r3) << ", " << SelectSymbolForWrite(t2->_r4) << ", " << 
-		SelectSymbolForWrite(t2->_r5) << ",\t";
+		SelectSymbolForWrite(t2->_r5) << ",	\t";
 	
 	file << SelectSymbolForWrite(t3->_r1) << ", " << SelectSymbolForWrite(t3->_r2) << ", "
 		<< SelectSymbolForWrite(t3->_r3) << ", " << SelectSymbolForWrite(t3->_r4) << ", " << 
@@ -667,18 +690,6 @@ void WriteWin(const char* winValue, TestSymbol* top, TestSymbol* mid, TestSymbol
 
 	file.open(filename, ios::app|ios::out);
 	
-	/*TestSymbol top;
-	top._r1 = ReelScreen[0][0]; top._r2 = ReelScreen[1][0]; top._r3 = ReelScreen[2][0];
-	top._r4 = ReelScreen[3][0]; top._r5 = ReelScreen[4][0];
-	
-	TestSymbol middle;
-	middle._r1 = ReelScreen[0][1]; middle._r2 = ReelScreen[1][1]; middle._r3 = ReelScreen[2][1];
-	middle._r4 = ReelScreen[3][1]; middle._r5 = ReelScreen[4][1];
-	
-	TestSymbol bottom;
-	bottom._r1 = ReelScreen[0][2]; bottom._r2 = ReelScreen[1][2]; bottom._r3 = ReelScreen[2][2];
-	bottom._r4 = ReelScreen[3][2]; bottom._r5 = ReelScreen[4][2];*/
-	
 	WriteToFile(file, top, mid, bot);
 	
 	file.close();
@@ -752,3 +763,62 @@ void WriteWins()
 		}
 	}
 }
+
+int CountPuffs() {
+	int counter = 0;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 5; j++) {
+			if (ReelScreen[i][j] == PUFF)
+				counter++;
+		}
+	}
+	
+	if (counter == 3) return counter;
+	else return 0;
+}
+
+void CheckDiver() {
+	bool specificTileIsSet = false;
+	char * filename = "";
+
+#ifdef DIVER_TOP 
+	specificTileIsSet = (ReelScreen[0][4] == DIVER) ? true : false;
+#ifdef _DEBUG
+	filename = "outcomes\\features\\diver\\debug\\diver_top.txt";
+#endif
+	filename = "outcomes\\features\\diver\\diver_top.txt";
+#elif DIVER_MID
+	specificTileIsSet = (ReelScreen[1][4] == DIVER) ? true : false;
+#ifdef _DEBUG
+	filename = "outcomes\\features\\diver\\debug\\diver_top.txt";
+#endif
+	filename = "outcomes\\features\\diver\\diver_top.txt";
+#else
+	specificTileIsSet = (ReelScreen[2][4] == DIVER) ? true : false;
+#ifdef DIVER_BOTTOM
+	filename = "outcomes\\features\\diver\\debug\\diver_bottom.txt";
+#endif
+	filename = "outcomes\\features\\diver\\diver_bottom.txt";
+#endif
+
+	int counter = 0;
+
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 5; j++) {
+			if (ReelScreen[i][j] == DIVER)
+				counter++;
+		}
+	}
+
+	if (counter == 1 && specificTileIsSet) {
+		TestSymbol top(ReelScreen[0][0], ReelScreen[0][1], ReelScreen[0][2],
+			ReelScreen[0][3], ReelScreen[0][4]);
+		TestSymbol mid(ReelScreen[1][0], ReelScreen[1][1], ReelScreen[1][2],
+			ReelScreen[1][3], ReelScreen[1][4]);
+		TestSymbol bot(ReelScreen[2][0], ReelScreen[2][1], ReelScreen[2][2],
+			ReelScreen[2][3], ReelScreen[2][4]);
+
+		WriteFeature(filename, &top, &mid, &bot);
+	}
+}
+
