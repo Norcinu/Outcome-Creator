@@ -11,9 +11,6 @@
 //#define PUFF_THREE
 //#define PUFF_FOUR
 //#define PUFF_FIVE
-//#define DIVER_TOP
-//#define DIVER_MID
-//#define DIVER_BOTTOM
 
 using namespace std;
 
@@ -100,10 +97,10 @@ int main(int argc, char *argv[]) {
 		feature = CheckForFeature();
 
 		winValue = CheckForWin() / 10;		
-		
+
 		if (winValue > 0 && !feature) {
 			WinResultArray[winValue]++;
-
+#ifdef WRITE_OUT_MAP
 			TestSymbol *top = new TestSymbol(ReelScreen[0][0], ReelScreen[1][0], ReelScreen[2][0],
 				ReelScreen[3][0], ReelScreen[4][0]);
 			TestSymbol *mid = new TestSymbol(ReelScreen[0][1], ReelScreen[1][1], ReelScreen[3][1],
@@ -126,21 +123,24 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
 			screens.insert(make_pair(winValue, symbols));
+#endif
 		}
 
 		if (feature && !winValue) {
-			writtenFiles++;
-			int cs = feature >> 4; // current symbol being used 
-			int count = feature & cs;// | 1; // the amount of them in the winline.
+			//writtenFiles++;
+			int cs = (feature >> 4) & 0xF;  // current symbol being used 
+			int count = feature & 0xF;		// the amount of them in the winline.
 			//int symbol = cs; 
-			if (count == 4)
+
+			if (count == 5) {
+				++writtenFiles;
 				FoundFeature(cs);
+			}
 			
 			feature = 0;
 		}
-
 #if defined (PUFF_THREE) || defined (PUFF_FOUR) || defined (PUFF_FIVE)
-		else if (!feature && !winValue && writtenFiles < 250) {
+		else if (!feature && !winValue && writtenFiles < 1000) {
 			if (CountPuffs() == 5 /*&& CountPuffs() <= 5*/) {
 				TestSymbol top(ReelScreen[0][0], ReelScreen[0][1], ReelScreen[0][2], 
 					ReelScreen[0][3], ReelScreen[0][4]);
@@ -150,25 +150,25 @@ int main(int argc, char *argv[]) {
 					ReelScreen[2][3], ReelScreen[2][4]);
 
 				char *filename;
-#ifdef PUFF_THREE
-#ifdef _DEBUG
+	#ifdef PUFF_THREE
+		#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff3ok.txt";
-#else
+		#else
 				filename = "outcomes\\features\\puff\\puff3ok.txt";
-#endif
-#elif defined PUFF_FOUR
-#ifdef _DEBUG
+		#endif
+	#elif defined PUFF_FOUR
+		#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff4ok.txt";
-#else
+		#else
 				filename = "outcomes\\features\\puff\\puff4ok.txt";
-#endif
-#else
-#ifdef _DEBUG
+		#endif
+	#else
+		#ifdef _DEBUG
 				filename = "outcomes\\features\\puff\\debug\\puff5ok.txt";
-#else
+		#else
 				filename = "outcomes\\features\\puff\\puff5k.txt";
-#endif
-#endif
+		#endif
+	#endif
 				WriteFeature(filename, &top, &mid, &bottom);
 				writtenFiles++;
 				
@@ -178,6 +178,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 #endif
+
 #if defined(DIVER_TOP) || defined (DIVER_MID) || defined (DIVER_BOTTOM)
 		else if (!winValue && !feature && writtenFiles < 250) {
 			CheckDiver();
@@ -269,34 +270,35 @@ int CheckForWin()
 		} // 4 from the left.
 		else if (IsFourOfAKind(0, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if (CurrentEligibleSymbol < ACE|| CurrentEligibleSymbol == SHARK)
+			if (CurrentEligibleSymbol <= ACE|| CurrentEligibleSymbol == SHARK)
 				GetFoursWin(CurrentEligibleSymbol);
 		} // 4 from the right.
 		else if (IsFourOfAKind(1, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
+			if (CurrentEligibleSymbol <= ACE || CurrentEligibleSymbol == SHARK)
 				GetFoursWin(CurrentEligibleSymbol);
 		} // 3 from the left.
 		else if (IsThreeOfAKind(0, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[0][pos1];
-			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
+			if (CurrentEligibleSymbol <= ACE || CurrentEligibleSymbol == SHARK)
 				GetThreesWin(CurrentEligibleSymbol);
 		} // three from centre.
 		else if (IsThreeOfAKind(1, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[1][pos2];
-			if (CurrentEligibleSymbol < ACE || CurrentEligibleSymbol == SHARK)
+			if (CurrentEligibleSymbol <= ACE || CurrentEligibleSymbol == SHARK)
 				GetThreesWin(CurrentEligibleSymbol);
 		} // three from the right
 		else if (IsThreeOfAKind(2, &symbols)) {
 			CurrentEligibleSymbol = ReelScreen[2][pos3];
-			if (CurrentEligibleSymbol < ACE)
+			if (CurrentEligibleSymbol <= ACE) {
 				GetThreesWin(CurrentEligibleSymbol);
+			}
 		}
 		// two of a kind
 		//if (CurrentEligibleSymbol == SHARK) {
-		if (ReelScreen[0][pos1] == SHARK) {
+		if (ReelScreen[i][pos1] == SHARK) {
 			CurrentEligibleSymbol = SHARK;
-			if (ReelScreen[0][pos1] == SHARK && ReelScreen[0][pos2] == SHARK)
+			if (ReelScreen[i][pos1] == SHARK && ReelScreen[i][pos2] == SHARK)
 				accumulatedTotal += 1000;
 		}
 
@@ -306,7 +308,7 @@ int CheckForWin()
 	//FoundFeature(symbolValue);
 
 	// set featureFound flag if we find a feature.
-
+	
 	int total = accumulatedTotal;
 	accumulatedTotal = 0;
 	return total;
@@ -353,7 +355,7 @@ int CheckForFeature()
 		int pos3 = WinLines[i][2];
 		int pos4 = WinLines[i][3];
 		int pos5 = WinLines[i][4];
-		
+			
 		TestSymbol symbol(pos1, pos2, pos3, pos4, pos5);
 		
 		if (IsFiveOfAKind(&symbol)) {
@@ -434,10 +436,19 @@ int CheckForFeature()
 		}
 	}
 
-	if (numOfFeatures > 1)
+	// DOES THIS NEED TO BE REMOVED? YES!!
+	//if (featureData > 0)
+	//	return featureData;
+
+	if (numOfFeatures == 0 || numOfFeatures >= 2)
 		return 0;
 
+	if (numOfFeatures == 1 && featureData > 0 && currentWinCount==5 && CurrentEligibleSymbol == LOBSTER)
+		return featureData;
+
 	return featureData;
+	
+	//return featureData;
 }
 
 void PickReels() 
@@ -469,15 +480,15 @@ void GetFivesWin( int sym )
 	
 	switch (sym) {
 	case TEN: // Ten
-		accumulatedTotal += WinValueTable[0][2]; break;	
+		accumulatedTotal += WinValueTable[0][3]; break;	
 	case JACK: // Jack
-		accumulatedTotal += WinValueTable[1][2]; break;
+		accumulatedTotal += WinValueTable[1][3]; break;
 	case QUEEN: // Queen
-		accumulatedTotal += WinValueTable[2][2]; break;
+		accumulatedTotal += WinValueTable[2][3]; break;
 	case KING: // King						
-		accumulatedTotal += WinValueTable[3][2]; break; // £25 
+		accumulatedTotal += WinValueTable[3][3]; break; // £25 
 	case ACE: // Ace
-		accumulatedTotal += WinValueTable[4][2]; break;	
+		accumulatedTotal += WinValueTable[4][3]; break;	
 	case SHARK:
 		accumulatedTotal += 10000; break;
 	default:
@@ -491,15 +502,15 @@ void GetFoursWin(int sym)
 	using namespace statics;
 	switch (sym) {
 	case TEN: // Ten 0
-		accumulatedTotal += WinValueTable[0][1]; break;
+		accumulatedTotal += WinValueTable[0][2]; break;
 	case JACK: // Jack 1
-		accumulatedTotal += WinValueTable[1][1]; break;	
+		accumulatedTotal += WinValueTable[1][2]; break;	
 	case QUEEN: // Queen 2
-		accumulatedTotal += WinValueTable[2][1]; break;
+		accumulatedTotal += WinValueTable[2][2]; break;
 	case KING: // King 3
-		accumulatedTotal += WinValueTable[3][1]; break; // £10
+		accumulatedTotal += WinValueTable[3][2]; break; // £10
 	case ACE: // Ace 4
-		accumulatedTotal += WinValueTable[4][1]; break;
+		accumulatedTotal += WinValueTable[4][2]; break;
 	case SHARK:
 		accumulatedTotal += 2000; break;
 	default:
@@ -513,15 +524,15 @@ void GetThreesWin(int sym)
 	using namespace statics;
 	switch (sym) {
 	case TEN: // Ten
-		accumulatedTotal += WinValueTable[1][0]; break;
+		accumulatedTotal += WinValueTable[1][1]; break;
 	case JACK: // Jack
-		accumulatedTotal += WinValueTable[2][0]; break;
+		accumulatedTotal += WinValueTable[2][1]; break;
 	case QUEEN: // Queen
-		accumulatedTotal += WinValueTable[2][0]; break;
+		accumulatedTotal += WinValueTable[2][1]; break;
 	case KING: // King
-		accumulatedTotal += WinValueTable[3][0]; break; // £25	
+		accumulatedTotal += WinValueTable[3][1]; break; // £25	
 	case ACE: // Ace
-		accumulatedTotal += WinValueTable[4][0]; break;
+		accumulatedTotal += WinValueTable[4][1]; break;
 	case SHARK:
 		accumulatedTotal += 100; break;
 	default:
@@ -537,16 +548,16 @@ void FoundFeature(int sym)
 	strcat(filename, "features\\");
 
 	switch (sym) {
-	case ACE:
-		strcat(filename, "ACE_OUTCOMES.txt"); break;
-	case TEN:
-		strcat(filename, "TEN_OUTCOMES.txt"); break;
-	case JACK:
-		strcat(filename, "JACK_OUTCOMES.txt"); break;
-	case QUEEN:
-		strcat(filename, "QUEEN_OUTCOMES.txt"); break;
-	case KING:
-		strcat(filename, "KING_OUTCOMES.txt"); break;
+//	case ACE:
+//		strcat(filename, "ACE_OUTCOMES.txt"); break;
+//	case TEN:
+//		strcat(filename, "TEN_OUTCOMES.txt"); break;
+//	case JACK:
+//		strcat(filename, "JACK_OUTCOMES.txt"); break;
+//	case QUEEN:
+//		strcat(filename, "QUEEN_OUTCOMES.txt"); break;
+//	case KING:
+//		strcat(filename, "KING_OUTCOMES.txt"); break;
 	case CRAB:
 		strcat(filename, "CRAB_OUTCOMES.txt"); break;
 	case SHELL:
@@ -598,7 +609,7 @@ void WriteToFile( ofstream& file, const TestSymbol* t1,
 {
 	assert (t1 != NULL && t2 != NULL && t3 != NULL);
 
-#ifdef _DEBUG
+/*#ifdef _DEBUG
 	++FEATURE_WRITES;
 
 	file << "{" << SelectSymbolForWrite(t1->_r1) << ", " << SelectSymbolForWrite(t1->_r2) << ", "
@@ -613,7 +624,7 @@ void WriteToFile( ofstream& file, const TestSymbol* t1,
 		<< SelectSymbolForWrite(t3->_r3) << ", " << SelectSymbolForWrite(t3->_r4) << ", " << 
 		SelectSymbolForWrite(t3->_r5) << "}," << " // winline = " << currentWinline 
 		<< ", winCount = " << currentWinCount << "\n\n";
-#else
+#else*/
 	file << "{" << SelectSymbolForWrite(t1->_r1) << ", " << SelectSymbolForWrite(t1->_r2) << ", "
 		<< SelectSymbolForWrite(t1->_r3) << ", " << SelectSymbolForWrite(t1->_r4) << ", " << 
 		SelectSymbolForWrite(t1->_r5) << ",\t";
@@ -626,7 +637,7 @@ void WriteToFile( ofstream& file, const TestSymbol* t1,
 		<< SelectSymbolForWrite(t3->_r3) << ", " << SelectSymbolForWrite(t3->_r4) << ", " << 
 		SelectSymbolForWrite(t3->_r5) << "}," << " // winline = " << currentWinline 
 		<< ", winCount = " << currentWinCount << "\n";
-#endif
+//#endif
 }
 
 unsigned char * SelectSymbolForWrite(const int symbol)
